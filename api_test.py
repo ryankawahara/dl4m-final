@@ -2,64 +2,75 @@ import requests
 
 api_key = "779ffcbce4723a30bcec338f0ff0ba18"
 query = "Jack Reacher"
-max_page_number = 5
+max_page_number = 80
 page_size = 50
 
 def collect_data(page_max):
-    # url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={query}"
-    # page_url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}&page={page_number}&page_size={page_size}"
-    movie_data_list = []
+    with open("dataset.txt", "a") as file:
 
-    for page_number in range(1,page_max):
-        page_url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}&page={page_number}&page_size={page_size}&language=en"
+        # url = f"https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={query}"
+        # page_url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}&page={page_number}&page_size={page_size}"
+        movie_data_list = []
 
-        # response = requests.get(url)
-        page_response = requests.get(page_url)
+        for page_number in range(1,page_max):
+            page_url = f"https://api.themoviedb.org/3/movie/popular?api_key={api_key}&page={page_number}&page_size={page_size}&language=en"
 
-        if page_response.status_code == 200:
-            page_data = page_response.json()
-            # key = page_data["results"][0]["id"]
+            # response = requests.get(url)
+            page_response = requests.get(page_url)
 
-            for movie in page_data["results"]:
-                if movie["original_language"] == "en":
-                    title = movie["original_title"]
-                    key = movie["id"]
-                    conv_genres = process_genres(movie["genre_ids"])
-                    movie_data = [title, movie["id"], conv_genres]
-                    details = requests.get(f"https://api.themoviedb.org/3/movie/{key}?api_key={api_key}&append_to_response=videos")
-                    details_data = details.json()
+            if page_response.status_code == 200:
+                page_data = page_response.json()
+                # key = page_data["results"][0]["id"]
 
-                    youtube_ids = youtube_id = details_data["videos"]["results"]
-                    vid = None
-                    for youtube_id in youtube_ids:
-                        if youtube_id["type"] == "Trailer" and youtube_id["official"]==True:
-                            vid = youtube_id
-                            break
+                for movie in page_data["results"]:
+                    if movie["original_language"] == "en":
+                        title = movie["original_title"]
+                        key = movie["id"]
+                        conv_genres = process_genres(movie["genre_ids"])
+                        if no_genres(conv_genres) == True:
+                            continue
+                        movie_data = [title, movie["id"], conv_genres]
+                        details = requests.get(f"https://api.themoviedb.org/3/movie/{key}?api_key={api_key}&append_to_response=videos")
+                        details_data = details.json()
 
-
-
-
-                    # youtube_id = details_data["videos"]["results"][0]["key"]
-
-                    if vid:
-                        movie_data.append(vid["key"])
-                        movie_data_list.append(movie_data)
-                        print(movie_data, convert_genres(movie_data[2]))
+                        youtube_ids = youtube_id = details_data["videos"]["results"]
+                        vid = None
+                        for youtube_id in youtube_ids:
+                            if youtube_id["type"] == "Trailer" and youtube_id["official"]==True:
+                                vid = youtube_id
+                                break
 
 
 
 
+                        # youtube_id = details_data["videos"]["results"][0]["key"]
 
-            # details = requests.get(f"https://api.themoviedb.org/3/movie/{key}?api_key={api_key}&append_to_response=videos")
-            # details_data = details.json()
-            #
-            # print(details_data["videos"]["results"][0]["key"])
-        else:
-            # something went wrong...
-            print(f"Error: {page_response.status_code} - {page_response.text}")
+                        if vid:
+                            movie_data.append(vid["key"])
+                            print(movie_data, convert_genres(movie_data[2]))
+                            try:
+                                file.write(str(movie_data) + "\n")
+                            except UnicodeEncodeError:
+                                continue
 
-    print(len(movie_data_list))
-    print(movie_data_list)
+                            movie_data_list.append(movie_data)
+
+                            # print(movie_data, convert_genres(movie_data[2]))
+
+
+
+
+
+                # details = requests.get(f"https://api.themoviedb.org/3/movie/{key}?api_key={api_key}&append_to_response=videos")
+                # details_data = details.json()
+                #
+                # print(details_data["videos"]["results"][0]["key"])
+            else:
+                # something went wrong...
+                print(f"Error: {page_response.status_code} - {page_response.text}")
+
+        print(len(movie_data_list))
+        print(movie_data_list)
 
 
 def process_genres(genre_ids):
@@ -99,4 +110,10 @@ def convert_genres(genres):
 
     return genre_list
 
-collect_data(10)
+def no_genres(arr):
+    for element in arr:
+        if element != 0:
+            return False
+    return True
+
+collect_data(500)
