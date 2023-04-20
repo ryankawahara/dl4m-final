@@ -7,6 +7,8 @@ import time
 
 # where to save
 SAVE_PATH = os.getcwd()
+referrer = 'https://www.youtube.com/'
+
 
 def download_video(id):
     # link of the video to be downloaded
@@ -15,7 +17,7 @@ def download_video(id):
     try:
         # object creation using YouTube
         # which was imported in the beginning
-        yt = YouTube(link)
+        yt = YouTube(link, referrer=referrer)
     except:
         print("Connection Error") #to handle exception
 
@@ -72,41 +74,64 @@ def get_ids(source):
 
 def check_ids(ids):
     unavail_ids = []
+    unlisted = []
     total = len(ids)
-    for index, id in enumerate(ids):
-        link = f"https://www.youtube.com/watch?v={id}"
+    with open('avail.txt', 'a') as avail_file, open('unavail.txt', 'a') as unavail_file:
 
-        try:
-            # object creation using YouTube
-            # which was imported in the beginning
-            yt = YouTube(link)
-        except:
-            print("Connection Error")  # to handle exception
-        print(f"{id}    {index}/{total}")
+        for index, id in enumerate(ids):
+            link = f"https://www.youtube.com/watch?v={id}"
 
-        success = False
-        fail_count = 0
-        while success == False and fail_count < 8:
             try:
-                mp4files = yt.streams.filter(file_extension='mp4', resolution='360p')
-                success = True
-            except KeyError:
-                print("retrying")
-                success = False
-                fail_count += 1
-            except exceptions.VideoUnavailable:
-                print(f"{id} is unavailable")
-                unavail_ids.append(id)
-                unavail = True
-                break
+                # object creation using YouTube
+                # which was imported in the beginning
+                yt = YouTube(link)
+            except:
+                print("Connection Error")  # to handle exception
+            print(f"{id}    {index}/{total}")
 
-    revised_ids = [x for x in ids if x not in unavail_ids]
-    with open('avail.txt', 'w') as f:
-        f.write('\n'.join(revised_ids))
-        # f.write(str(revised_ids))
+            success = False
+            fail_count = 0
+            while success == False and fail_count < 15:
+                try:
+                    mp4files = yt.streams.filter(file_extension='mp4', resolution='360p')
+                    success = True
+                    avail_file.write(str(id) + '\n')
+                except KeyError:
+                    print("retrying")
+                    success = False
+                    fail_count += 1
+                    if fail_count == 15:
+                        print(f"can't access {id}")
+                        unlisted.append(id)
+                        unavail_file.write(str(id) + '\n')
 
-    with open('unavail.txt', 'w') as f:
-        f.write('\n'.join(unavail_ids))
+                except ConnectionResetError:
+                    print("Connection error, retrying")
+                    success = False
+                    fail_count += 1
+                    if fail_count == 15:
+                        print(f"connection coudln't get {id}")
+                        unlisted.append(id)
+                        unavail_file.write(str(id) + '\n')
+
+
+                except exceptions.VideoUnavailable:
+                    print(f"{id} is unavailable")
+                    unavail_ids.append(id)
+                    unavail_file.write(str(id) + '\n')
+                    unavail = True
+                    break
+
+    # revised_ids = [x for x in ids if x not in unavail_ids and x not in unlisted]
+    # with open('avail.txt', 'w') as f:
+    #     f.write('\n'.join(revised_ids))
+    #     # f.write(str(revised_ids))
+    #
+    # with open('unavail.txt', 'w') as f:
+    #     f.write('\n'.join(unavail_ids))
+    #     f.write("\n unlisted \n")
+    #     f.write('\n'.join(unlisted))
+
 
         # f.write(str(unavail_ids))
 
@@ -121,3 +146,5 @@ def check_ids(ids):
 ids = get_ids("ids.txt")
 unavail = check_ids(ids)
 print(unavail)
+
+
