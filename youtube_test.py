@@ -165,6 +165,7 @@ def get_dataset_ids(data_path):
 def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
     if os.path.exists(folder_path) == False or os.path.exists(audio_folder) == False:
         print("no")
+        print(os.getcwd())
         return False
 
     num_frames+=1
@@ -191,17 +192,10 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
             try:
                 stream = yt.streams.filter(res=f"{resolution}p").first()
                 audio_stream = yt.streams.filter(only_audio=True).first()
-                print(yt.streams.filter(only_audio=True))
-
-
                 video_url = stream.url
-
-
                 # Download the audio stream to the audio folder
                 # audio_file_path = os.path.join(audio_folder, f"{id}.wav")
                 audio_stream.download(output_path=audio_folder, filename=f"{id}.wav")
-
-
 
                 # Create a VideoCapture object from the video URL
                 cap = cv2.VideoCapture(video_url)
@@ -231,7 +225,7 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
                     mean_value = np.mean(gray_frame)
 
                     # If the mean value is less than 10, skip the frame
-                    if mean_value < 0.5:
+                    if mean_value < 3:
                         print("black")
                         frame_count += 1
                         frame_max += 1
@@ -327,11 +321,12 @@ def download_frames(folder_path, video_ids, num_frames):
                 # If the mean value is less than 10, skip the frame
                 if mean_value < 0.5:
                     print("black")
-                    frame_count += 1
-                    frame_max +=1
-
+                    offset += 1
                     continue
 
+                # If the mean value is not less than 0.5, increment the frame count and reset the offset
+                frame_count += 1
+                offset = 0
                 # Save the frame to the frames folder
                 frame_file_path = os.path.join(frames_video_folder, f"{video_id}_{frame_num}.jpg")
                 frame_num+=1
@@ -355,9 +350,10 @@ def main():
 
     ids = get_dataset_ids("dataset.txt")
     # print(ids)
-    test = ids[3:5]
-    print(test)
-    download_frames_retry("frames/", "audio/", test,8)
+    test = ids[25:50]
+    # print(test)
+    # test = ["_Z3QKkl1WyM"]
+    download_frames_retry("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/frames/", "/mnt/h/My Drive/dl4m_datasets/trailer_dataset/audio/", test,8)
 
 
 main()
