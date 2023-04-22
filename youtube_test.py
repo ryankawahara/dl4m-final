@@ -54,8 +54,6 @@ def download_video(id):
         print(f"{id} failed after {fail_count} tries")
         return False
 
-
-
 def separate_audio(video_path, audio_path):
     # create a VideoFileClip object
     video_clip = VideoFileClip(video_path)
@@ -72,7 +70,6 @@ def separate_audio(video_path, audio_path):
     if os.path.exists(audio_path):
         return True
     return False
-
 
 def get_ids(source):
     with open(source, 'r') as file:
@@ -151,7 +148,6 @@ def check_ids(ids):
 
         # filters out all the files with "mp4" extension and 360p resolution
 
-
 # download_video("n2Y3GoN2PGw")
 # ids = get_ids("ids.txt")
 # unavail = check_ids(ids)
@@ -164,12 +160,13 @@ def get_dataset_ids(data_path):
             line = eval(line)
             ids.append(line[3])
     return ids
+
 def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
     if os.path.exists(folder_path) == False or os.path.exists(audio_folder) == False:
         print("destination paths do not exist")
         print(os.getcwd())
         return False
-
+    start_time = time.time()
     num_frames+=1
     # Path to the folder where the frames will be saved
     frames_folder = folder_path
@@ -178,7 +175,7 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
     total = len(video_ids)
     for index, id in enumerate(video_ids):
 
-        success_rate = (1-(len(failed_ids)/total))*100
+        success_rate = (1-(len(failed_ids)/(index+1)))*100
         frame_max = num_frames
 
         link = f"https://www.youtube.com/watch?v={id}"
@@ -189,7 +186,11 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
         except:
             print("Connection Error")  # to handle exception
 
-        print(f"{id}    {index+1}/{total}  Successful: {success_rate}")
+        end_time = time.time()
+
+        curr_time = (end_time - start_time)/60
+
+        print(f"{id}\t{index+1}/{total}\tSuccessful: {success_rate:.2f}\tElapsed: {curr_time:.2f}m")
 
         success = False
         fail_count = 0
@@ -291,96 +292,26 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
                 except Exception as e:
                     print(e)
 
+    now_time = time.time()
+    complete_time = (now_time - start_time)/60
+
+    succ_num = len(video_ids) - len(failed_ids)
+
+    print(f"Downloaded {succ_num}/{video_ids} in {complete_time:.2f}m")
+
     # Loop through each video ID
     return failed_ids
 
-def download_frames(folder_path, video_ids, num_frames):
-    num_frames+=1
-    # Path to the folder where the frames will be saved
-    frames_folder = folder_path
-    MAX_ATTEMPTS = 5
-
-    # Loop through each video ID
-    for video_id in video_ids:
-        frame_max = num_frames
-
-        try:
-            # Create a YouTube object
-            yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-
-            # Get the video stream with the lowest resolution and its URL
-            stream = yt.streams.filter(res="360p").first()
-            video_url = stream.url
-
-            # Create a VideoCapture object from the video URL
-            cap = cv2.VideoCapture(video_url)
-
-            # Create the frames folder for this video ID
-            frames_video_folder = os.path.join(frames_folder, video_id)
-            os.makedirs(frames_video_folder, exist_ok=True)
-
-            # Get the frames from the video and save them to the frames folder
-            frame_count = 0
-            frame_num = 0
-            skip_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) / num_frames)
-            offset = 0
-
-            while True:
-                # Set the frame position in the video
-                frame_pos = (frame_count * skip_frames) + offset
-                print(frame_pos)
-                # Set the video capture object to the frame position
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_pos)
-
-                # Read the frame from the video
-                ret, frame = cap.read()
-
-                # If the frame is all black, skip it
-                # Convert the frame to grayscale and calculate its mean value
-                gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                mean_value = np.mean(gray_frame)
-
-                # If the mean value is less than 10, skip the frame
-                if mean_value < 0.5:
-                    # print("black")
-                    offset += 1
-                    continue
-
-                # If the mean value is not less than 0.5, increment the frame count and reset the offset
-                frame_count += 1
-                offset = 0
-
-                # If the mean value is not less than 0.5, increment the frame count and reset the offset
-                frame_count += 1
-                offset = 0
-                # Save the frame to the frames folder
-                frame_file_path = os.path.join(frames_video_folder, f"{video_id}_{frame_num}.jpg")
-                frame_num+=1
-                cv2.imwrite(frame_file_path, frame)
-
-                # Increment the frame count
-                frame_count += 1
-
-                # Break the loop if we have saved 5 frames
-                if frame_count == num_frames:
-                    break
-
-            # Release the video capture object
-            cap.release()
-
-            print(f"Downloaded frames for video ID {video_id}")
-        except Exception as e:
-            print(e)
-            print(f"Failed to download frames for video ID {video_id}")
 def main():
 
     ids = get_dataset_ids("dataset.txt")
     # print(ids)
     # test = ids[14:55]
-    test = ids[50:100]
-    
+    # test = ids[69:100]
+    # test = ids[1101:1201]
+    # test = ids[1205:1210]
+    test = ids[1210:1261]
     # note: 0:50 gets up to 49. So the next chunk should start at 50:whatever
-
     # print(test)
     # test = ["5OzP3grTnz8"]
     download_frames_retry("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/frames/", "/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/audio/", test, 30)
