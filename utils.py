@@ -119,8 +119,6 @@ def data_generator(data_path, img_shape, augment, normalize, shuffle):
         new_path = os.path.sep.join(path_components)
 
         file_path = new_path
-        print(f"file: {file_path}")
-
 
         img = cv2.imread(file_path)
 
