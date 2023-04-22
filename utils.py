@@ -24,13 +24,16 @@ def load_data(data_path, labels_dict):
         A tuple of two numpy arrays. The first array contains the file paths of the image files, and the second array
         contains their corresponding labels (0 for cat and 1 for dog).
     """
-
+    data_path = os.path.abspath(data_path)
+    if os.path.exists(data_path) == False:
+        print("no dir")
+        return False
     image_files = []
     labels = []
 
     for root, dirs, files in os.walk(data_path):
         for file in files:
-            if file.endswith('.jpg'):
+            if file.endswith(('.png',)):
                 id = file.split("_")
 
                 # id = [item.decode('utf-8') for item in id]
@@ -42,7 +45,7 @@ def load_data(data_path, labels_dict):
                 file_path = os.path.join(data_path, file)
                 image_files.append(file_path)
 
-    print(len(image_files) == len(labels))
+    # print(len(image_files) == len(labels))
     return image_files, labels
 
 
@@ -73,12 +76,17 @@ def data_generator(data_path, img_shape, augment, normalize, shuffle):
     data_gen = data_generator('/path/to/images', (224,224), True, True)
     images, labels = next(data_gen)
     """
+    if isinstance(data_path, bytes):
+        data_path = data_path.decode('utf-8')
+
 
     # Get list of image file names and their corresponding labels
     with open('genres.json', 'r') as f:
         # Load the JSON data as a dictionary
         labels_dict = json.load(f)
-    image_files, labels = load_data(data_path, labels_dict)
+
+    image_files, labels = load_data(str(data_path), labels_dict)
+
 
     # Convert labels to numpy array
     labels = np.array(labels)
@@ -97,8 +105,9 @@ def data_generator(data_path, img_shape, augment, normalize, shuffle):
         label = labels[idx]
         file_path = image_files[idx]
         # NEED TO ADD THE FOLDER
-        p
-        file_path = str(file_path.decode('utf-8'))
+
+        if isinstance(file_path, bytes):
+            file_path = str(file_path.decode('utf-8'))
 
         path_components = file_path.split(os.path.sep)
         file = os.path.basename(file_path)
@@ -123,8 +132,27 @@ def data_generator(data_path, img_shape, augment, normalize, shuffle):
             print(e)
             continue
 
+        crop = False
+
         # Resize image to expected size
-        img = cv2.resize(img, img_shape)
+        if crop == True:
+            height, width = img.shape[:2]
+
+            # Calculate the coordinates of the center of the image
+            center_y = int(height / 2)
+            center_x = int(width / 2)
+
+            # Calculate the coordinates of the top-left corner of the crop
+            crop_y = center_y - int(img_shape[0] / 2)
+            crop_x = center_x - int(img_shape[1] / 2)
+
+            # Crop the image
+            cropped_img = img[crop_y:crop_y + img_shape[0], crop_x:crop_x + img_shape[1]]
+
+            # Resize the cropped image to the desired shape
+            img = cv2.resize(cropped_img, img_shape)
+        else:
+            img = cv2.resize(img, img_shape)
 
         # if augment:
         #     # Augment image
@@ -133,6 +161,7 @@ def data_generator(data_path, img_shape, augment, normalize, shuffle):
         if normalize:
             # Normalize image to within [0,1]
             img = img / 255.
+
 
         yield img, label
 
@@ -159,11 +188,11 @@ def create_dataset(data_path, batch_size, img_shape, augment=False, normalize=Tr
     dataset : tf.data.Dataset
         A TensorFlow dataset containing the images and their labels.
     """
-    print(data_path)
     output_size = img_shape + (3,)
+
     dataset = tf.data.Dataset.from_generator(
         data_generator,
-        args=[data_path, img_shape, augment, normalize, shuffle],
+        args=[str(data_path), img_shape, augment, normalize, shuffle],
         output_signature=(
             tf.TensorSpec(shape=output_size, dtype=tf.float32),
             tf.TensorSpec(shape=(10,), dtype=tf.uint8)))
@@ -181,6 +210,41 @@ def create_dataset(data_path, batch_size, img_shape, augment=False, normalize=Tr
     dataset = dataset.batch(batch_size)
 
     return dataset
+
+
+def create_dataset_from_file_paths(file_paths, batch_size, img_shape, augment=False, normalize=True, shuffle=True):
+    """
+    Creates a TensorFlow dataset from image files.
+
+    Parameters
+    ----------
+    file_paths : list
+        List of file paths containing the image files.
+    batch_size : int
+        Batch size for the returned dataset.
+    img_shape : tuple
+        Tuple of integers representing the desired image shape, e.g. (224, 224).
+    augment : bool, optional
+        Whether to apply image augmentation to the dataset. Default is False.
+    normalize : bool, optional
+        Whether to normalize the pixel values of the images to the range [0, 1]. Default is False.
+
+    Returns
+    -------
+    dataset : tf.data.Dataset
+        A TensorFlow dataset containing the images and their labels.
+    """
+    output_size = img_shape + (3,)
+    dataset = tf.data.Dataset.from_tensor_slices(file_paths)
+    dataset = dataset.map(
+        lambda x: tuple(tf.numpy_function(
+            load_and_preprocess_image, [x, img_shape, augment, normalize], [tf.float32, tf.uint8])),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    dataset = dataset.batch(batch_size)
+
+    return dataset
+
 
 
 def explore_data(train_ds, data_home, class_names=['Action', 'Adventure', 'Comedy', 'Crime', 'Drama', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller']):
@@ -222,7 +286,6 @@ def explore_data(train_ds, data_home, class_names=['Action', 'Adventure', 'Comed
             if val == 1:
                 train_class_counts[i] += 1
 
-    print(train_class_counts)
 
     # train_class_counts = [[class_names[i] for i in range(len(label)) if label[i] == 1] for label in labels]
 
@@ -233,3 +296,15 @@ def explore_data(train_ds, data_home, class_names=['Action', 'Adventure', 'Comed
 
 
     plt.show()
+
+
+
+def convert_genres(genres):
+    genre_list = []
+    genre_names = ['Action', 'Adventure', 'Comedy', 'Crime', 'Drama', 'Horror', 'Mystery', 'Romance', 'Science Fiction', 'Thriller']
+
+    for i in range(len(genres)):
+        if genres[i] == 1:
+            genre_list.append(genre_names[i])
+
+    return genre_list
