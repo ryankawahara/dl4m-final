@@ -297,11 +297,35 @@ def download_frames_retry(folder_path, audio_folder, video_ids, num_frames):
 
     succ_num = len(video_ids) - len(failed_ids)
 
-    print(f"Downloaded {succ_num}/{video_ids} in {complete_time:.2f}m")
+    print(f"Downloaded {succ_num}/{len(video_ids)} in {complete_time:.2f}m")
 
     # Loop through each video ID
     return failed_ids
 
+def folder_count(folder_path):
+    folders = next(os.walk(folder_path))[1]
+    num_folders = len(folders)
+    print(f"There are {num_folders} folders in {folder_path}.")
+    return folders
+
+def file_count(folder_path):
+    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)) and f.endswith(".wav")]
+    num_files = len(files)
+    print(f"There are {num_files} files in {folder_path}.")
+    return files
+
+def check_files():
+    folders = folder_count("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/frames/")
+    files = file_count("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/audio/")
+    audio_list = [file_name[:-4] for file_name in files]
+
+    # Print the new list
+    diff = set(folders) ^ set(audio_list)
+    print(len(diff))
+    if len(diff) > 0:
+        print("The differing item is:", diff.pop())
+    else:
+        print("The two lists are identical.")
 def main():
 
     ids = get_dataset_ids("dataset.txt")
@@ -310,12 +334,18 @@ def main():
     # test = ids[69:100]
     # test = ids[1101:1201]
     # test = ids[1205:1210]
-    test = ids[1210:1261]
+    # test = ids[1210:1261]
+    # test
+    # test = ids[1261:2561]
+
+    # validation
+    test = ids[2561:2761]
+
     # note: 0:50 gets up to 49. So the next chunk should start at 50:whatever
     # print(test)
     # test = ["5OzP3grTnz8"]
-    download_frames_retry("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/frames/", "/mnt/h/My Drive/dl4m_datasets/trailer_dataset/train/audio/", test, 30)
-
+    download_frames_retry("/mnt/h/My Drive/dl4m_datasets/trailer_dataset/test/frames/", "/mnt/h/My Drive/dl4m_datasets/trailer_dataset/test/audio/", test, 30)
+    # check_files()
 
 main()
 
