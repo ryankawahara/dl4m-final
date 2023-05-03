@@ -6,6 +6,7 @@ Goal: Evaluate the performances of visual and audio models on genre classificati
 
 dataset.txt is a collection of movies, trailers, and genres from www.themoviedb.org. Almost all of the links provided in the dataset were valid, and we were able to download 93% of them. We downloaded 31 frames as well as the audio from each trailer. The frames were selected at consistent intervals, varying on the length of the trailer. To avoid the green trailer slide, the first frame was always 200 frames in. We also used cv2 to decide to skip any completely black frames. The data had multiple labels, between 1 and 6 in the following genres: 
 Action, Adventure, Comedy, Crime, Drama, Horror, Mystery, Romance, Science Fiction, Thriller
+The entire dataset is available [here](https://drive.google.com/drive/folders/1NA-uPe9AM5WsIAboSjoM6eW-d8C1YFZu).
 
 ## Visual Approach
 
